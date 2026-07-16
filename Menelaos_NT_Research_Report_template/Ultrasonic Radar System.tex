@@ -15,6 +15,8 @@
 \usepackage{textcomp}
 \usepackage{xcolor}
 \usepackage{fancyhdr}
+\usepackage[T1]{fontenc}
+\usepackage[romanian]{babel}
     
 \fancypagestyle{firstpagefooter}{%
   \fancyhf{}
@@ -25,7 +27,7 @@
 \pagestyle{empty}
 
 \begin{document}
-\title{Ultrasonic Radar System based on Atmega328P}
+\title{Sistem Radar Ultrasonic bazat pe Atmega328P}
 
 \author{\IEEEauthorblockN{Fiat Nicoleta-Paraschiva}
 \IEEEauthorblockA{\textit{Universitatea Politehnica Timisoara} \\
@@ -37,6 +39,7 @@ nicoleta-paraschiva.fiat@student.upt.ro}
 \maketitle
 
 \begin{abstract}
+
 Acest proiect prezinta designul si implementarea unui sistem radar bazat pe senzorul Ultrasonic HC-SR04 si microcontrolerului Atmega328P. Obiectivul principal al acestei lucrari este utilizarea manipularii directe a registrilor pentru a optimiza controlul hardware al servomotorului si al senzorului, folosind un sistem de scanare eficient si precis.
 \end{abstract}
 
@@ -53,6 +56,32 @@ In domeniul dezvoltarii sistemelor autonome si al automatizarilor industriale, m
 Spre deosebire de implementarile didactice standard in cadrul carora sunt utilizate bibliotecile de nivel inalt al platformei Arduino, lucrarea de fata propune o abordare orientata catre eficienta si control hardware strict. Aceasta se realizeaza prin manipularea directa a registrilor microcontrolerului Atmega328P , o metoda care ofera o intelegere profunda a arhitecturii hardware. 
 
 Sistemul integreaza un senzor ultrasonic HC-SR04 pentru determinarea distantei si un servomotor pentru pozitionare, toate datele fiind afisate pe un afisaj LCD, oferind un flux de lucru complet, de la preluarea datelor brute pana la prezentarea rezultatelor finale.
+
+\section{Arhitectura Hardware-Componente si interactiunea lor}
+\begin{table}[h]
+    \centering
+    
+    \label{tab:conexiuni}
+    \begin{tabular}{|l|l|l|l|}
+        \hline
+        \textbf{Componentă} & \textbf{Pin Senzor} & \textbf{Pin Arduino} & \textbf{Funcție} \\ \hline
+        HC-SR04 & VCC & 5V & Alimentare \\ \hline
+        HC-SR04 & GND & GND & Masă \\ \hline
+        HC-SR04 & TRIG & Pin 2 & Trigger \\ \hline
+        HC-SR04 & ECHO & Pin 3 & Întrerupere (INT1) \\ \hline
+    \end{tabular}
+    \caption{Configurarea conexiunilor hardware pentru senzorul HC-SR04}
+\end{table}
+Proiectul a luat nastere prin unirea a doua lumi: mintea digitala a microcontrolerului si capacitatea senzoriala a HC-SR04. Pentru ca radarul sa prinda viata, a trebuit să creez o punte de comunicare intre aceste doua entitati, transformand componentele izolate intr-un sistem unitar.
+
+In centrul sistemului se afla „creierul” acestuia, placa Arduino. Am ales aceasta platforma pentru versatilitatea sa, dar adevarata provocare a fost integrarea cu senzorul ultrasonic HC-SR04. Acesta din urma functioneaza ca un sistem sonar: emite un impuls ultrasonic si asteapta ecoul care ii va spune cat de departe este un obiect.
+
+Conexiunea fizica a fost primul pas al acestui proces. Am inceput prin a-i oferi senzorului "energia" necesara, conectandu-l la pinul de 5V si GND (masa) al Arduino-ului. Insa, pentru a comunica, am avut nevoie de doua linii de legatura vitale: pinii digitali. Am rezervat pinul 2 pentru a trimite semnalul de start (TRG) si pinul 3 pentru "a asculta" ecoul (ECHO). In acest "dialog" intre cele doua, Arduino-ul preia locul coordonatorului. Acesta trimite un impuls scurt, de 10 microsecunde, pe pinul de TRIG, activand senzorul. Odata ce semnalul a fost transmis, sistemul intra intr-o etapa critica, asteptarea ecoului. Pentru aceasta, am ales o abordare sincrona, bazata pe bucla while. In esenta, Arduino-ul intra intr-o staree de vigilenta totala, "inghetand" orice alta activitate pentru a actualiza constant starea pinului de ECHO.
+Functionarea este urmatoarea: bucla while mentine procesorul blocat intr-o numaratoare precisa a microsecundelor din momentul in care pinul ECHO devine activ pana in momentul in care revine in starea de repaus. Desi aceasta metoda este este intuitiva si ofera rezultate imediate, am observat un compromis: cat timp senzorul "asculta" ecoul, placa Arduino nu poate face nimic altceva. Procesorul devine, in acele milisecunde, un prizioner al propriei masuratori, incapabil sa gestioneze sarcini secundare, precum actualizarea afisajului pe LCD sau reactia la alte evenimente externe.
+
+Aceasta prima iteratie a fost lectia mea despre costul eficientei. Am inteles ca, desi bucla while isi indeplineste misiunea de a masura distanta, ea consuma resurse pretioase de calcul prin "asteptare activa". Este un pas fundamental care mi-a permis sa calibrez senzorul si sa inteleg fizica din spatele undelor sonore, punand bazele necesare pasului urmator: eliberarea procesorului din aceasta bucla printr-o arhitectura mult mai rafinata. 
+ 
+
  
 Citation example\cite{puente2013review}.
 
