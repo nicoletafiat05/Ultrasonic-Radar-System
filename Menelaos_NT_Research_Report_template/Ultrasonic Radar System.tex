@@ -82,7 +82,36 @@ Functionarea este urmatoarea: bucla while mentine procesorul blocat intr-o numar
 Aceasta prima iteratie a fost lectia mea despre costul eficientei. Am inteles ca, desi bucla while isi indeplineste misiunea de a masura distanta, ea consuma resurse pretioase de calcul prin "asteptare activa". Este un pas fundamental care mi-a permis sa calibrez senzorul si sa inteleg fizica din spatele undelor sonore, punand bazele necesare pasului urmator: eliberarea procesorului din aceasta bucla printr-o arhitectura mult mai rafinata. 
  
 
- 
+\section{Implementarea controlului PWM prin registre}
+Din dorinta de a evita biblioteci predefinite, precum Servo.h, am optat pentru o abordare care utilizeaza Timer 1 al microcontrolerului Atmega328P pentru a genera semnalul PWM necesar functionarii servomotorului SG90. Aceasta abordare permite un control precis asupra perioadei si frecventei semnalului generat. Conform datasheet-ului servomotorului este necesara o frecventa a semnalului de 50 Hz si o perioada de 20 ms. Am utilizat modul Fast PWM ce permite utilizarea registrului ICR1 (Input Capture Register) pentru valoarea de TOP folosita pentru frecventa semnalului si registrul OCR1A (Output Compare Register 1A) pentru a calcula Duty Cycle-ul. 
+
+Pentru atingerea frecventei de 50Hz pe un oscilator de 16MHz am utilizat un prescaler de 8. Astfel, frecventa Timer-ului devine 2MHz(16MHz/8). Valoarea registrului ICR1 a fost calculata conform formulei: \[
+TOP = \frac{f_{clk}}{f_{PWM} \times N} - 1 = \frac{16.000.000}{50 \times 8} - 1 = 39.999
+\]
+Aceasta configuratie ofera o rezolutie optima, permitand controlul fin al pozitiei servomotorului prin intermediul registrului OCR1A. In mod specific, pentru servomotorul SG90, intervalul de impuls necesar (intre 1ms si 2ms) am stabilit o corespondenta directa intre specificatiile temporale ale semnalului de comanda si valorile inregistrate in registrul OCR1A. Analiza matematica a fost fundamentata pe urmatoarele considerente: 
+
+ 1)Perioada totala: S-a stabilit o frecventa de 50Hz, ceea ce rezulta intr-o perioada de T=20ms;
+
+ 2)Rezolutia Timer-ului: Prin setarea registrului ICR1 la valoarea 39.999, am definit un ciclu de lucru total de 40.000 de pasi (incluzand si valoarea 0).
+
+ 3)Corelatia temporala: Fiecare pas al Timer-ului reprezinta o unitate de timp de 0.5us (la un ceas de 16MHz si un prescaler de 8). Astfel, pentru a genera un impuls de 1ms( echivalentul a 0 grade ), valoarea necesara in registrul de comparare este: 
+ \[
+\text{OCR1A}_{0^\circ} = \frac{1000\,\mu\text{s}}{0,5\,\mu\text{s/pas}} = 2000
+\]
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Unghi} & \textbf{Durata Impuls} & \textbf{Valoare Registru (\texttt{OCR1A})} \\ \hline
+        0$^{\circ}$    & 1.0 ms               & 2000 \\ \hline
+        90$^{\circ}$   & 1.5 ms               & 3000 \\ \hline
+        180$^{\circ}$  & 2.0 ms               & 4000 \\ \hline
+    \end{tabular}
+    \caption{Maparea unghiulara a servomotorului SG90}
+\end{table}
+
+Aplicand aceeasi metodologie pentru restul intervalului util al servomotorului(1,5ms pentru 90 grade si 2ms pentru 180 grade), am derivat valorile de control care asigura o deplasare unghiulara precisa, fara a recurge la functii de abstractizare software care ar introduce latente nedorite in executie. Aceasta abordare garanteaza un raport 1:1 intre valoarea scrisa in registru si pozitia mecanica a actuatorului.
+
 Citation example\cite{puente2013review}.
 
 
